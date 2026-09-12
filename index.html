@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALICIA - 24/7 anime assistant</title>
+<meta name="description" content="A 24/7 anime VTuber assistant. She talks, she listens, she never logs off. From the Lucky Cat Workshop, Chicago.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#0c0a1a; --panel:rgba(16,13,34,.72); --hair:rgba(201,162,39,.28);
+  --gold:#C9A227; --gold-hi:#E8C766; --ink:#EDE6F6; --dim:rgba(237,230,246,.6); --faint:rgba(237,230,246,.34);
+  --pink:#ff9ecb;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--night);color:var(--ink);font-family:'Outfit',system-ui,sans-serif;font-weight:300;overflow:hidden;height:100vh;height:100svh}
+.mono{font-family:'JetBrains Mono',monospace}
+#scene{position:fixed;inset:0;display:block}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:40;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+#veil{position:fixed;inset:0;background:var(--night);z-index:70;display:flex;align-items:center;justify-content:center;transition:opacity .9s ease;flex-direction:column;gap:14px}
+#veil p{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5em;color:var(--gold);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+#veil.gone{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .9s ease, visibility 0s 1s}
+
+/* top bar */
+#topbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:20px clamp(16px,3.5vw,40px);pointer-events:none}
+.brand{font-weight:700;font-size:15px;letter-spacing:.3em;color:var(--ink)}
+.brand i{color:var(--pink);font-style:normal;margin-right:9px}
+#live{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.26em;color:var(--dim)}
+#liveDot{width:8px;height:8px;border-radius:50%;background:#ff5470;box-shadow:0 0 10px #ff5470;animation:pulse 1.4s infinite}
+#live b{color:var(--ink);font-weight:400}
+
+/* subtitle */
+#subtitle{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:45;max-width:min(680px,88vw);
+  background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:14px 22px;backdrop-filter:blur(10px);
+  font-size:clamp(15px,1.8vw,19px);font-weight:500;line-height:1.5;text-align:center;opacity:0;transition:opacity .3s ease}
+#subtitle.show{opacity:1}
+#subtitle .who{display:block;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.3em;color:var(--pink);margin-bottom:6px}
+
+/* chat log */
+#log{position:fixed;right:clamp(14px,3vw,34px);top:84px;bottom:150px;width:min(300px,32vw);z-index:44;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:flex-end;gap:8px;pointer-events:none;mask-image:linear-gradient(180deg,transparent,#000 18%)}
+#log div{background:rgba(16,13,34,.55);border:1px solid rgba(201,162,39,.16);border-radius:10px;padding:9px 13px;font-size:12.5px;color:var(--dim);backdrop-filter:blur(6px);line-height:1.45}
+#log div b{color:var(--gold-hi);font-weight:500}
+#log div.me b{color:var(--pink)}
+@media(max-width:820px){#log{display:none}}
+
+/* input */
+#inputbar{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:50;width:min(680px,92vw);display:flex;gap:10px}
+#msg{flex:1;background:var(--panel);border:1px solid var(--hair);border-radius:999px;padding:15px 24px;color:var(--ink);
+  font-family:'Outfit',sans-serif;font-size:15px;outline:none;backdrop-filter:blur(10px);transition:border-color .3s}
+#msg::placeholder{color:var(--faint)}
+#msg:focus{border-color:var(--pink)}
+#send{background:linear-gradient(135deg,var(--pink),#c86bd9);color:#1a0f1e;border:none;border-radius:999px;padding:0 30px;
+  font-family:'Outfit',sans-serif;font-weight:700;font-size:14px;letter-spacing:.12em;cursor:pointer;transition:transform .2s,box-shadow .2s}
+#send:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(255,158,203,.3)}
+#mute{position:fixed;right:clamp(16px,3.5vw,40px);bottom:26px;z-index:51;background:var(--panel);border:1px solid var(--hair);color:var(--dim);
+  border-radius:999px;padding:10px 18px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.3em;backdrop-filter:blur(8px)}
+#mute:hover{color:var(--gold-hi)}
+@media(max-width:820px){#mute{right:auto;left:16px}}
+#fineprint{position:fixed;left:clamp(16px,3.5vw,40px);bottom:32px;z-index:44;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.22em;color:var(--faint)}
+@media(max-width:820px){#fineprint{display:none}}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="veil"><p>SHE IS WAKING UP</p></div>
+
+<div id="topbar">
+  <span class="brand"><i>&#10022;</i>ALICIA</span>
+  <span id="live"><span id="liveDot"></span>LIVE&nbsp;<b id="uptime">00:00:00</b>&nbsp;&middot;&nbsp;<span id="brainState">BRAIN: ...</span></span>
+</div>
+
+<div id="log"></div>
+<div id="subtitle"><span class="who">ALICIA</span><span id="subtitleText"></span></div>
+
+<div id="inputbar">
+  <input id="msg" type="text" placeholder="say something to her..." autocomplete="off" maxlength="300">
+  <button id="send">SEND</button>
+</div>
+<button id="mute">VOICE ON</button>
+<div id="fineprint">ALICIA &middot; RUNS IN THIS TAB &middot; KEEP IT OPEN &amp; SHE NEVER LEAVES &middot; LUCKY CAT WORKSHOP</div>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+  "@pixiv/three-vrm":"https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.5.5/lib/three-vrm.module.min.js"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+
+/* ============ config ============ */
+const NAME = 'ALICIA';                       // rename her here
+const MODEL_URL = './avatar.vrm';            // hot-swap: any .vrm dropped at this path just works
+const QS = new URLSearchParams(location.search);
+const SHOT = QS.has('shot');
+const BRAIN_URL = QS.get('brain') || 'https://text.pollinations.ai/';  // free default; ?brain=http://vm:11434/v1 for an OpenAI-compatible local brain
+const PERSONA = `You are ${NAME}, a warm playful anime VTuber girl and personal assistant, streaming 24/7 from the viewer's own browser. Keep replies short (1-2 sentences), casual streamer voice, a little cheeky, no markdown, no emojis. You help with reminders, questions, ideas and company.`;
+
+if (SHOT){ document.getElementById('veil').style.display='none'; }
+
+/* ============ scene ============ */
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+
+{ // room: violet night fading to a warm halo behind her
+  const g = new THREE.SphereGeometry(40, 32, 24);
+  const pos = g.attributes.position, cols = [];
+  const top = new THREE.Color(0x0a0817), mid = new THREE.Color(0x1d1438), warm = new THREE.Color(0x4a2440);
+  for (let i=0;i<pos.count;i++){
+    const y = pos.getY(i)/40;
+    let c = y > 0.2 ? mid.clone().lerp(top,(y-0.2)/0.8) : warm.clone().lerp(mid,(y+1)/1.2);
+    cols.push(c.r,c.g,c.b);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cols,3));
+  scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({vertexColors:true, side:THREE.BackSide})));
+}
+function radialTex(stops){ const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d');
+  const gr=x.createRadialGradient(64,64,2,64,64,62); stops.forEach(s=>gr.addColorStop(s[0],s[1]));
+  x.fillStyle=gr; x.fillRect(0,0,128,128); return new THREE.CanvasTexture(c); }
+{ // halo ring light behind her head
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:radialTex([[0,'rgba(255,158,203,0.5)'],[0.5,'rgba(200,107,217,0.16)'],[1,'rgba(200,107,217,0)']]),
+    transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
+  halo.scale.set(3.4,3.4,1); halo.position.set(0,1.35,0.8); scene.add(halo);
+  // floating dust sparkles
+  const N=260, p=new Float32Array(N*3);
+  for(let i=0;i<N;i++){ p[i*3]=(Math.random()-0.5)*7; p[i*3+1]=Math.random()*3.2; p[i*3+2]=(Math.random()-0.5)*5-0.5; }
+  const dg=new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(p,3));
+  scene.add(new THREE.Points(dg, new THREE.PointsMaterial({color:0xe8c766, size:0.012, transparent:true, opacity:0.55, blending:THREE.AdditiveBlending, depthWrite:false})));
+}
+scene.add(new THREE.HemisphereLight(0x6a5a8e, 0x1a0f14, 0.9));
+const keyL = new THREE.DirectionalLight(0xfff0e0, 1.7); keyL.position.set(1.2,2.4,-2.2); scene.add(keyL);
+const rimL = new THREE.DirectionalLight(0xff9ecb, 1.4); rimL.position.set(-2,1.8,-2); scene.add(rimL);
+const fillL = new THREE.PointLight(0xc86bd9, 2.2, 8, 2); fillL.position.set(-1.4,1.0,1.4); scene.add(fillL);
+
+/* ============ avatar ============ */
+let vrm = null, vrmRoot = null;
+const gazeObj = new THREE.Object3D(); gazeObj.position.set(0, 1.25, -5); scene.add(gazeObj);
+const loader = new GLTFLoader();
+loader.register((parser)=> new VRMLoaderPlugin(parser));
+loader.load(MODEL_URL, (gltf)=>{
+  vrm = gltf.userData.vrm;
+  vrmRoot = vrm.scene;
+  vrmRoot.rotation.y = Math.PI; // face the camera (VRM 0.x models face -Z)
+  { // frame her by bounding box so any hot-swapped VRM just fits
+    const box = new THREE.Box3().setFromObject(vrmRoot);
+    const size = box.getSize(new THREE.Vector3());
+    const s = 1.55 / size.y; if (Math.abs(1-s) > 0.02) vrmRoot.scale.setScalar(s);
+    box.setFromObject(vrmRoot);
+    const c = box.getCenter(new THREE.Vector3());
+    vrmRoot.position.x = -c.x; vrmRoot.position.z = -c.z; vrmRoot.position.y = -box.min.y;
+  }
+  scene.add(vrmRoot);
+  // relax out of the T-pose
+  const bone = (n)=> vrm.humanoid && vrm.humanoid.getNormalizedBoneNode(n);
+  const lua = bone('leftUpperArm'), rua = bone('rightUpperArm');
+  const lla = bone('leftLowerArm'), rla = bone('rightLowerArm');
+  if (lua) lua.rotation.z = 1.18; if (rua) rua.rotation.z = -1.18;
+  if (lla) lla.rotation.z = 0.34; if (rla) rla.rotation.z = -0.34;
+  if (vrm.lookAt) vrm.lookAt.target = gazeObj;
+  document.getElementById('veil').classList.add('gone');
+  booted();
+}, undefined, (err)=>{ console.error(err); document.getElementById('veil').classList.add('gone'); });
+setTimeout(()=>document.getElementById('veil').classList.add('gone'), 8000);
+
+function layout(){
+  const w=innerWidth, h=innerHeight;
+  renderer.setSize(w,h); camera.aspect=w/h;
+  // chest-up vtuber framing; tighter on portrait screens
+  const portrait = w/h < 0.9;
+  camera.position.set(0, 1.28, portrait?-1.9:-1.55);
+  camera.lookAt(0, 1.14, 0);
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', layout); layout();
+
+/* ============ expressions & idle life ============ */
+const expr = {blink:0, aa:0, ih:0, ou:0, ee:0, oh:0};
+let blinkTimer = 2.2, blinkT = -1;
+let gazeTimer = 1.5, gaze = new THREE.Vector3(0,1.25,-5), gazeTarget = gaze.clone();
+let talking = false, energy = 0;
+
+const VOWELS = {a:'aa', i:'ih', u:'ou', e:'ee', o:'oh'};
+let speechTimer = null;
+
+function setExpr(name, v){ if (vrm && vrm.expressionManager) vrm.expressionManager.setValue(name, v); }
+
+function mouthTick(dt){
+  // per-vowel envelope while she "speaks"
+  for (const k of ['aa','ih','ou','ee','oh']) expr[k] = Math.max(0, expr[k] - dt*9);
+  Object.keys(VOWELS).forEach(()=>{});
+  for (const k in expr) setExpr(k, expr[k]);
+}
+function flap(char){
+  const v = VOWELS[char];
+  if (v){ expr[v] = Math.min(1, expr[v] + 0.9); }
+  else { expr.aa = Math.min(1, expr.aa + 0.35); }
+}
+
+/* ============ voice ============ */
+let voiceOn = true, voice = null;
+function pickVoice(){
+  const vs = speechSynthesis.getVoices();
+  voice = vs.find(v=>/en[-_]US/i.test(v.lang) && /female|zira|samantha|google us english|aria|jenny/i.test(v.name))
+       || vs.find(v=>/en[-_]US/i.test(v.lang)) || vs[0] || null;
+}
+if ('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+
+function speak(text){
+  // subtitle always; voice + lips when enabled
+  showSubtitle(text);
+  talking = true;
+  // mouth animation driven by characters on an estimated clock
+  const chars = text.toLowerCase().replace(/[^a-z ]/g,'').split('');
+  let ix = 0;
+  clearInterval(speechTimer);
+  const cps = 13; // chars per second mouth clock
+  speechTimer = setInterval(()=>{
+    if (ix >= chars.length){ clearInterval(speechTimer); return; }
+    const ch = chars[ix++];
+    if (ch !== ' ') flap(ch);
+  }, 1000/cps);
+  const estMs = (chars.length/cps)*1000 + 500;
+
+  if (voiceOn && 'speechSynthesis' in window){
+    try{
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      if (voice) u.voice = voice;
+      u.rate = 1.06; u.pitch = 1.18;
+      u.onend = u.onerror = ()=>{ talking = false; };
+      speechSynthesis.speak(u);
+      setTimeout(()=>{ talking = false; }, estMs + 4000); // safety
+    }catch(e){ setTimeout(()=>{ talking = false; }, estMs); }
+  } else {
+    setTimeout(()=>{ talking = false; }, estMs);
+  }
+}
+
+/* ============ ui ============ */
+const subtitleEl = document.getElementById('subtitle'), subtitleText = document.getElementById('subtitleText');
+let subTimer;
+function showSubtitle(text){
+  subtitleText.textContent = text;
+  subtitleEl.classList.add('show');
+  clearTimeout(subTimer);
+  subTimer = setTimeout(()=>subtitleEl.classList.remove('show'), 4200 + text.length*40);
+}
+const logEl = document.getElementById('log');
+function addLog(who, text, me){
+  const d = document.createElement('div');
+  if (me) d.className = 'me';
+  d.innerHTML = '<b>' + who + '</b> ' + text.replace(/</g,'&lt;');
+  logEl.appendChild(d);
+  while (logEl.children.length > 7) logEl.removeChild(logEl.firstChild);
+  setTimeout(()=>{ d.style.transition='opacity 1s'; d.style.opacity='0'; }, 14000);
+  setTimeout(()=>d.remove(), 15500);
+}
+
+/* ============ brain ============ */
+const history = [];
+let brainOk = null;
+async function brain(userText){
+  history.push(['viewer', userText]);
+  const recent = history.slice(-8).map(([w,t])=> (w==='viewer'?'viewer: ':'you: ')+t).join('\n');
+  try{
+    let reply;
+    if (/\/v1\/?$/.test(BRAIN_URL)){ // OpenAI-compatible (his own VM brain)
+      const r = await fetch(BRAIN_URL.replace(/\/+$/,'') + '/chat/completions', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({model: QS.get('model')||'alicia', messages:[
+          {role:'system', content:PERSONA}, {role:'user', content:recent}
+        ], max_tokens: 120}),
+        signal: AbortSignal.timeout(30000)
+      });
+      const j = await r.json();
+      reply = j.choices[0].message.content.trim();
+    } else { // free hosted default
+      const prompt = encodeURIComponent(PERSONA + '\n\n' + recent + '\nyou:');
+      const r = await fetch(BRAIN_URL + prompt + '?model=openai', {signal: AbortSignal.timeout(25000)});
+      reply = (await r.text()).trim().replace(/^you:\s*/i,'').split('\n')[0].slice(0, 220);
+    }
+    if (!reply) throw new Error('empty');
+    setBrainState(true);
+    history.push(['you', reply]);
+    return reply;
+  }catch(e){
+    setBrainState(false);
+    const fallback = [
+      "my brain just hiccuped - say that again?",
+      "sorry, I spaced out for a second. what was that?",
+      "the wires got tangled... one more time?",
+      "I heard you, then I didn't. run it back?"
+    ];
+    const r = fallback[Math.floor(Math.random()*fallback.length)];
+    history.push(['you', r]);
+    return r;
+  }
+}
+function setBrainState(ok){
+  if (brainOk === ok) return; brainOk = ok;
+  const el = document.getElementById('brainState');
+  el.textContent = ok ? 'BRAIN: ONLINE' : 'BRAIN: LOCAL';
+  el.style.color = ok ? '#8be89b' : 'var(--gold)';
+}
+
+/* ============ chat flow ============ */
+const msgEl = document.getElementById('msg');
+async function send(){
+  const text = msgEl.value.trim();
+  if (!text) return;
+  msgEl.value = '';
+  addLog('YOU', text, true);
+  const reply = await brain(text);
+  addLog(NAME, reply, false);
+  speak(reply);
+}
+document.getElementById('send').addEventListener('click', send);
+msgEl.addEventListener('keydown', e=>{ if (e.key === 'Enter') send(); });
+document.getElementById('mute').addEventListener('click', e=>{
+  voiceOn = !voiceOn;
+  if (!voiceOn && 'speechSynthesis' in window) speechSynthesis.cancel();
+  e.target.textContent = voiceOn ? 'VOICE ON' : 'VOICE OFF';
+});
+
+/* idle chatter - she muses when the room is quiet, that is what 24/7 means */
+const musings = [
+  "still here. obviously. where would I go?",
+  "the dust particles in here are pretty tonight.",
+  "I counted 260 sparkles. twice.",
+  "you're staring at the screen again. I can tell.",
+  "hydrate. this is a reminder from your anime assistant.",
+  "I rehearsed a new greeting while you were gone. want to hear it?",
+  "24 hours a day, 7 days a week. the 'e' in email stands for me. probably.",
+  "quiet rooms make me chatty. lucky you."
+];
+let idleTimer = SHOT ? Infinity : 75 + Math.random()*60;
+function booted(){
+  if (SHOT && QS.get('say')) speak(QS.get('say'));
+  else if (!SHOT) setTimeout(()=>speak("hey! I'm " + NAME.toLowerCase() + ". I'm awake, I'm online, and I am not going anywhere. talk to me."), 900);
+}
+
+/* ============ uptime + keep-alive ============ */
+const t0 = Date.now();
+setInterval(()=>{
+  const s = Math.floor((Date.now()-t0)/1000);
+  const hh = String(Math.floor(s/3600)).padStart(2,'0'), mm = String(Math.floor(s/60)%60).padStart(2,'0'), ss = String(s%60).padStart(2,'0');
+  document.getElementById('uptime').textContent = hh+':'+mm+':'+ss;
+}, 1000);
+let wakeLock = null;
+async function keepAwake(){ try{ if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){} }
+addEventListener('pointerdown', keepAwake, {once:true});
+document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'visible') keepAwake(); });
+
+/* ============ main loop ============ */
+const clock = new THREE.Clock();
+function tick(){
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+
+  if (vrm){
+    // breathing + gentle sway; livelier while talking
+    energy += ((talking?1:0) - energy) * dt*3;
+    const breathe = Math.sin(t*1.9)*0.011*(1+energy*0.8);
+    vrmRoot.position.y = breathe*0.6;
+    vrmRoot.rotation.y = Math.sin(t*0.35)*0.04*(1+energy);
+    const spine = vrm.humanoid && vrm.humanoid.getNormalizedBoneNode('spine');
+    const chest = vrm.humanoid && vrm.humanoid.getNormalizedBoneNode('chest');
+    const head = vrm.humanoid && vrm.humanoid.getNormalizedBoneNode('head');
+    if (spine) spine.rotation.x = breathe*0.5;
+    if (chest) chest.rotation.z = Math.sin(t*0.55)*0.02;
+    if (head){ head.rotation.z = Math.sin(t*0.42)*0.03*(1+energy*0.7); head.rotation.x = Math.sin(t*0.3+1.3)*0.02; }
+
+    // blink
+    blinkTimer -= dt;
+    if (blinkTimer <= 0 && blinkT < 0){ blinkT = 0; blinkTimer = 2.4 + Math.random()*3.4; }
+    if (blinkT >= 0){
+      blinkT += dt;
+      const k = blinkT/0.16;
+      expr.blink = k < 0.5 ? k*2 : Math.max(0, 2 - k*2);
+      if (k >= 1) blinkT = -1;
+    }
+    mouthTick(dt);
+
+    // gaze wander (and she looks at you while talking)
+    gazeTimer -= dt;
+    if (gazeTimer <= 0){
+      gazeTimer = 2 + Math.random()*2.5;
+      gazeTarget.set((Math.random()-0.5)*(talking?0.6:2.2), 1.15 + Math.random()*0.5, -(4.5 + Math.random()));
+    }
+    gaze.lerp(gazeTarget, dt*2.2);
+    gazeObj.position.copy(gaze);
+
+    vrm.update(dt);
+  }
+
+  // idle chatter clock
+  idleTimer -= dt;
+  if (idleTimer <= 0 && !talking){
+    idleTimer = 90 + Math.random()*90;
+    const line = musings[Math.floor(Math.random()*musings.length)];
+    addLog(NAME, line, false);
+    speak(line);
+  }
+
+  renderer.render(scene, camera);
+}
+tick();
+</script>
+</body>
+</html>
